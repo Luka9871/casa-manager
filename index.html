@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Casa Manager v4.2 - Dual Meal</title>
+    <title>Casa Manager v4.2</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #1a73e8; --bg: #f8f9fa; --card: #ffffff; --text: #3c4043; --border: #dadce0; --accent: #fbbc04; --danger: #d93025; }
@@ -14,14 +14,12 @@
         .page { display: none; padding: 15px; }
         .page.active { display: block; }
         .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-        .calendar-grid { display: grid; grid-template-columns: 1fr; gap: 10px; } /* Colonna singola per far stare pranzo/cena */
-        .day-box { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: white; position: relative; }
+        .calendar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .day-box { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: white; min-height: 80px; position: relative; }
         .day-box.today { border: 2px solid var(--primary); background: #e8f0fe; }
-        .day-label { font-size: 11px; color: #70757a; font-weight: bold; margin-top: 5px; display: block; }
-        input, select { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; box-sizing: border-box; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-main { background: var(--primary); color: white; width: 100%; }
-        .btn-cook { background: var(--accent); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; margin-top: 2px; display: inline-block; cursor: pointer; }
         .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
         .tab-btn { flex: 1; padding: 15px 0; border: none; background: none; font-size: 11px; color: #5f6368; font-weight: bold; }
         .tab-btn.active { color: var(--primary); border-top: 2px solid var(--primary); }
@@ -36,7 +34,8 @@
         <h2 style="color:var(--primary)">Casa Manager</h2>
         <input type="email" id="email" placeholder="Email">
         <input type="password" id="password" placeholder="Password">
-        <button class="btn-main" onclick="handleLogin()">Accedi</button>
+        <button id="login-btn" class="btn-main" onclick="handleLogin()">Accedi</button>
+        <p id="login-status" style="font-size:12px; color:var(--danger); margin-top:10px;"></p>
     </div>
 </div>
 
@@ -95,19 +94,39 @@
     let ingTemp = [];
     let editIdx = -1;
 
+    // Sblocco immediato: Controlla se c'è già una sessione attiva
     async function checkUser() {
         const { data } = await _supabase.auth.getSession();
-        if (data?.session) showApp();
+        if (data?.session) {
+            showApp();
+        }
     }
 
     async function handleLogin() {
         const e = document.getElementById('email').value;
         const p = document.getElementById('password').value;
-        const { error } = await _supabase.auth.signInWithPassword({ email: e, password: p });
-        if (error) alert("Errore: " + error.message); else showApp();
+        const btn = document.getElementById('login-btn');
+        const status = document.getElementById('login-status');
+        
+        btn.innerText = "Accesso in corso...";
+        btn.disabled = true;
+
+        const { data, error } = await _supabase.auth.signInWithPassword({ email: e, password: p });
+        
+        if (error) {
+            status.innerText = "Errore: " + error.message;
+            btn.innerText = "Accedi";
+            btn.disabled = false;
+        } else if (data.session) {
+            showApp();
+        }
     }
 
-    function handleLogout() { _supabase.auth.signOut(); location.reload(); }
+    function handleLogout() { 
+        _supabase.auth.signOut(); 
+        localStorage.clear(); // Pulisce residui che bloccano il login
+        location.reload(); 
+    }
 
     function showApp() {
         document.getElementById('login-page').style.display = 'none';
@@ -126,7 +145,7 @@
         render();
     }
 
-    // DISPENSA & RICETTE (Logica invariata)
+    // --- LOGICA DISPENSA & RICETTE (ESATTAMENTE COME 4.1) ---
     function aggiungiDispensa() {
         const n = document.getElementById('pNome').value.trim();
         const q = parseInt(document.getElementById('pQt').value);
@@ -135,28 +154,20 @@
         dbData.dispensa[k] = { q: q, display: n };
         resetDispEditor(); sync('dispensa');
     }
-    function editProd(k) {
-        document.getElementById('pNome').value = dbData.dispensa[k].display;
-        document.getElementById('pQt').value = dbData.dispensa[k].q;
-        document.getElementById('disp-title').innerText = "📝 Modifica";
-        document.getElementById('btn-annulla-disp').style.display = "block";
-    }
-    function resetDispEditor() {
-        document.getElementById('pNome').value = ""; document.getElementById('pQt').value = "";
-        document.getElementById('disp-title').innerText = "📦 Dispensa";
-        document.getElementById('btn-annulla-disp').style.display = "none";
-    }
+
     function addIng() {
         const n = document.getElementById('ingN').value.trim();
         const q = parseInt(document.getElementById('ingQ').value);
         if(n && q) { ingTemp.push({ n: n.toLowerCase(), q: q, display: n }); renderIngs(); }
     }
+
     function renderIngs() {
         document.getElementById('listaTemp').innerHTML = ingTemp.map((i, x) => `
             <div style="font-size:12px; background:#f0f0f0; padding:5px; margin-bottom:2px; display:flex; justify-content:space-between;">
                 ${i.display} (${i.q}) <span onclick="ingTemp.splice(${x},1);renderIngs()" style="color:red">✕</span>
             </div>`).join('');
     }
+
     function salvaRicetta() {
         const n = document.getElementById('rNome').value.trim();
         if(!n || ingTemp.length === 0) return;
@@ -164,94 +175,33 @@
         if(editIdx > -1) dbData.ricette[editIdx] = r; else dbData.ricette.push(r);
         resetRicEditor(); sync('ricette');
     }
-    function editRic(i) {
-        editIdx = i; const r = dbData.ricette[i];
-        document.getElementById('rNome').value = r.nome;
-        ingTemp = [...r.ingredienti]; renderIngs();
-        document.getElementById('ric-title').innerText = "📝 Modifica Ricetta";
-        document.getElementById('btn-annulla-ric').style.display = "block";
-    }
-    function resetRicEditor() {
-        editIdx = -1; ingTemp = []; renderIngs();
-        document.getElementById('rNome').value = "";
-        document.getElementById('ric-title').innerText = "📖 Ricette";
-        document.getElementById('btn-annulla-ric').style.display = "none";
-    }
-
-    // LOGICA CUCINA (Modificata per slot specifici)
-    function cucina(dataStr, slot) {
-        const pastoNome = dbData.piano[dataStr] ? dbData.piano[dataStr][slot] : null;
-        const r = dbData.ricette.find(x => x.nome === pastoNome);
-        if(!r || !confirm("Scarico ingredienti per " + pastoNome + "?")) return;
-        
-        r.ingredienti.forEach(i => {
-            const k = i.n;
-            if(dbData.dispensa[k]) dbData.dispensa[k].q = Math.max(0, dbData.dispensa[k].q - i.q);
-        });
-        
-        dbData.piano[dataStr][slot] = ""; 
-        sync('dispensa'); sync('piano');
-    }
 
     function render() {
-        const gs = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
+        const gs = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
         let f = new Date().getDate() - (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
         let hS = ""; let dS = [];
-        
         for(let i=0; i<7; i++) {
             let d = new Date(new Date().setDate(f+i));
             let s = d.toDateString(); dS.push(s);
-            if (!dbData.piano[s]) dbData.piano[s] = { pranzo: "", cena: "" };
-            
             hS += `<div class="day-box ${new Date().toDateString() === s ? 'today' : ''}">
-                <div style="font-weight:bold; color:var(--primary)">${gs[i]} ${d.getDate()}</div>
-                
-                <span class="day-label">PRANZO</span>
-                <div style="display:flex; gap:5px; align-items:center;">
-                    <select style="flex:1" onchange="dbData.piano['${s}'].pranzo=this.value;sync('piano')">
-                        <option value="">-</option>
-                        ${dbData.ricette.map(r => `<option value="${r.nome}" ${dbData.piano[s].pranzo===r.nome?'selected':''}>${r.nome}</option>`).join('')}
-                    </select>
-                    ${dbData.piano[s].pranzo ? `<div class="btn-cook" onclick="cucina('${s}', 'pranzo')">🥘</div>` : ''}
-                </div>
-
-                <span class="day-label">CENA</span>
-                <div style="display:flex; gap:5px; align-items:center;">
-                    <select style="flex:1" onchange="dbData.piano['${s}'].cena=this.value;sync('piano')">
-                        <option value="">-</option>
-                        ${dbData.ricette.map(r => `<option value="${r.nome}" ${dbData.piano[s].cena===r.nome?'selected':''}>${r.nome}</option>`).join('')}
-                    </select>
-                    ${dbData.piano[s].cena ? `<div class="btn-cook" onclick="cucina('${s}', 'cena')">🥘</div>` : ''}
-                </div>
+                <div style="font-size:12px;font-weight:bold">${gs[i]} ${d.getDate()}</div>
+                <select onchange="dbData.piano['${s}']=this.value;sync('piano')">
+                    <option value="">-</option>
+                    ${dbData.ricette.map(r => `<option value="${r.nome}" ${dbData.piano[s]===r.nome?'selected':''}>${r.nome}</option>`).join('')}
+                </select>
             </div>`;
         }
         document.getElementById('settimana').innerHTML = hS;
 
-        // CALCOLO SPESA (Somma entrambi i pasti)
-        let fab = {};
-        dS.forEach(x => {
-            ['pranzo', 'cena'].forEach(slot => {
-                let r = dbData.ricette.find(y => y.nome === dbData.piano[x][slot]);
-                if(r) r.ingredienti.forEach(i => fab[i.n] = (fab[i.n] || 0) + i.q);
-            });
-        });
-
-        let hSp = "";
-        for(let k in fab) {
-            let d = dbData.dispensa[k]?.q || 0;
-            if(d < fab[k]) hSp += `<div class="item-row">${dbData.dispensa[k]?.display || k} (${fab[k]-d}) <button class="btn-done" style="padding:4px 8px; font-size:10px" onclick="dbData.dispensa['${k}']={q:(dbData.dispensa['${k}']?.q||0)+(fab['${k}']-(dbData.dispensa['${k}']?.q||0)),display:k};sync('dispensa')">COMPRA</button></div>`;
-        }
-        document.getElementById('listaSpesa').innerHTML = hSp || "Tutto pronto!";
-
         document.getElementById('elencoDispensa').innerHTML = Object.keys(dbData.dispensa).map(k => `
-            <div class="clickable-item" onclick="editProd('${k}')">
+            <div class="clickable-item">
                 ${dbData.dispensa[k].display} <span class="badge">${dbData.dispensa[k].q}</span>
-                <span onclick="event.stopPropagation();delete dbData.dispensa['${k}'];sync('dispensa')" style="color:#ccc">✕</span>
+                <span onclick="delete dbData.dispensa['${k}'];sync('dispensa')" style="color:#ccc">✕</span>
             </div>`).join('');
 
         document.getElementById('elencoRicette').innerHTML = dbData.ricette.map((r, i) => `
-            <div class="clickable-item" onclick="editRic(${i})">
-                ${r.nome} <span onclick="event.stopPropagation();dbData.ricette.splice(${i},1);sync('ricette')" style="color:#ccc">✕</span>
+            <div class="clickable-item">
+                ${r.nome} <span onclick="dbData.ricette.splice(${i},1);sync('ricette')" style="color:#ccc">✕</span>
             </div>`).join('');
     }
 
@@ -260,6 +210,9 @@
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.getElementById(id).classList.add('active'); btn.classList.add('active');
     }
+
+    function resetDispEditor() { document.getElementById('pNome').value = ""; document.getElementById('pQt').value = ""; }
+    function resetRicEditor() { editIdx = -1; ingTemp = []; renderIngs(); document.getElementById('rNome').value = ""; }
 
     checkUser();
 </script>
