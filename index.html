@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Casa Manager v4.1 - Verified</title>
+    <title>Casa Manager v4.1.2</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #1a73e8; --bg: #f8f9fa; --card: #ffffff; --text: #3c4043; --border: #dadce0; --accent: #fbbc04; --danger: #d93025; --success: #1e8e3e; }
@@ -21,15 +21,13 @@
         button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-main { background: var(--primary); color: white; width: 100%; }
         .btn-cook { position: absolute; bottom: 5px; right: 5px; background: var(--accent); color: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-        /* FIX STILI MANCANTI */
         .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .btn-done { background: var(--success); color: white; padding: 6px 12px; font-size: 12px; border-radius: 6px; }
-        
+        .btn-done { background: var(--success); color: white; padding: 8px 15px; font-size: 13px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
         .tab-btn { flex: 1; padding: 15px 0; border: none; background: none; font-size: 11px; color: #5f6368; font-weight: bold; }
         .tab-btn.active { color: var(--primary); border-top: 2px solid var(--primary); }
         .clickable-item { padding: 12px; background: white; border: 1px solid #eee; border-radius: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
-        .badge { background: #e8f0fe; color: var(--primary); padding: 3px 8px; border-radius: 5px; font-size: 12px; }
+        .badge { background: #e8f0fe; color: var(--primary); padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -107,7 +105,7 @@
         const e = document.getElementById('email').value;
         const p = document.getElementById('password').value;
         const { error } = await _supabase.auth.signInWithPassword({ email: e, password: p });
-        if (error) alert("Errore: " + error.message); else showApp();
+        if (error) alert("Errore login"); else showApp();
     }
 
     function handleLogout() { _supabase.auth.signOut(); location.reload(); }
@@ -128,6 +126,16 @@
         await _supabase.from('casa_data').upsert({ data_type: t, content: dbData[t] });
         render();
     }
+
+    // FUNZIONE CRITICA: AGGIUNTA DA LISTA SPESA (L'HO SPOSTATA QUI PER ESSERE SICURO CHE FUNZIONI)
+    window.eseguiAcquisto = function(key, display, quantitaDaAggiungere) {
+        if (!dbData.dispensa[key]) {
+            dbData.dispensa[key] = { q: quantitaDaAggiungere, display: display };
+        } else {
+            dbData.dispensa[key].q += quantitaDaAggiungere;
+        }
+        sync('dispensa');
+    };
 
     // DISPENSA
     function aggiungiDispensa() {
@@ -203,13 +211,6 @@
         dbData.piano[d] = ""; sync('dispensa'); sync('piano');
     }
 
-    // FIX FUNZIONE COMPRA ESTERNA
-    window.compraRapido = function(k, d, q) {
-        if(!dbData.dispensa[k]) dbData.dispensa[k] = { q: q, display: d };
-        else dbData.dispensa[k].q += q;
-        sync('dispensa');
-    }
-
     function render() {
         const gs = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
         let f = new Date().getDate() - (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
@@ -218,7 +219,7 @@
             let d = new Date(new Date().setDate(f+i));
             let s = d.toDateString(); dS.push(s);
             hS += `<div class="day-box ${new Date().toDateString() === s ? 'today' : ''}">
-                <div style="font-size:12px; font-weight:bold">${gs[i]} ${d.getDate()}</div>
+                <div style="font-size:12px; font-weight:bold;">${gs[i]} ${d.getDate()}</div>
                 <select onchange="dbData.piano['${s}']=this.value;sync('piano')">
                     <option value="">-</option>
                     ${dbData.ricette.map(r => `<option value="${r.nome}" ${dbData.piano[s]===r.nome?'selected':''}>${r.nome}</option>`).join('')}
@@ -228,6 +229,7 @@
         }
         document.getElementById('settimana').innerHTML = hS;
 
+        // CALCOLO LISTA SPESA
         let fab = {};
         dS.forEach(x => {
             let r = dbData.ricette.find(y => y.nome === dbData.piano[x]);
@@ -241,29 +243,31 @@
         for(let k in fab) {
             let d = dbData.dispensa[k]?.q || 0;
             if(d < fab[k].q) {
-                let manca = fab[k].q - d;
-                let nomeVisualizzato = fab[k].d;
+                let diff = fab[k].q - d;
+                let nomeVis = fab[k].d;
+                // PROTEZIONE APICI PER IL JAVASCRIPT
+                let safeNome = nomeVis.replace(/'/g, "\\'");
                 hSp += `<div class="item-row">
-                    <span>${nomeVisualizzato} (mancano: ${manca})</span>
-                    <button class="btn-done" onclick="window.compraRapido('${k}', '${nomeVisualizzato}', ${manca})">OK</button>
+                    <span>${nomeVis} (mancano: ${diff})</span>
+                    <button class="btn-done" onclick="window.eseguiAcquisto('${k}', '${safeNome}', ${diff})">OK</button>
                 </div>`;
             }
         }
-        document.getElementById('listaSpesa').innerHTML = hSp || "<p style='text-align:center;font-size:12px;color:green'>Tutto pronto!</p>";
+        document.getElementById('listaSpesa').innerHTML = hSp || "<p style='text-align:center; color:green; font-weight:bold;'>Tutto pronto!</p>";
 
         document.getElementById('elencoDispensa').innerHTML = Object.keys(dbData.dispensa).map(k => `
             <div class="clickable-item" onclick="editProd('${k}')">
                 <span>${dbData.dispensa[k].display}</span>
-                <div style="display:flex; align-items:center; gap:10px;">
+                <div style="display:flex; align-items:center; gap:12px">
                     <span class="badge">${dbData.dispensa[k].q}</span>
-                    <span onclick="event.stopPropagation();delete dbData.dispensa['${k}'];sync('dispensa')" style="color:#ccc">✕</span>
+                    <span onclick="event.stopPropagation();delete dbData.dispensa['${k}'];sync('dispensa')" style="color:#ccc; padding:5px;">✕</span>
                 </div>
             </div>`).join('');
 
         document.getElementById('elencoRicette').innerHTML = dbData.ricette.map((r, i) => `
             <div class="clickable-item" onclick="editRic(${i})">
                 <span>${r.nome}</span>
-                <span onclick="event.stopPropagation();dbData.ricette.splice(${i},1);sync('ricette')" style="color:#ccc">✕</span>
+                <span onclick="event.stopPropagation();dbData.ricette.splice(${i},1);sync('ricette')" style="color:#ccc; padding:5px;">✕</span>
             </div>`).join('');
     }
 
