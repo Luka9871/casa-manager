@@ -3,77 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Casa Manager v4.2</title>
+    <title>Casa Manager v4.4</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #1a73e8; --bg: #f8f9fa; --card: #ffffff; --text: #3c4043; --border: #dadce0; --accent: #fbbc04; --danger: #d93025; }
-        body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding-bottom: 80px; background: var(--bg); color: var(--text); }
-        #login-page { display: flex; flex-direction: column; padding: 20px; align-items: center; justify-content: center; height: 95vh; }
-        .auth-card { width: 100%; max-width: 320px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; border: 1px solid var(--border); }
-        header { padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: white; position: sticky; top: 0; z-index: 10; }
-        .page { display: none; padding: 15px; }
+        :root { --primary: #1a73e8; --bg: #f1f3f4; --card: #ffffff; --text: #202124; --border: #dadce0; --success: #1e8e3e; --danger: #d93025; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding-bottom: 80px; background: var(--bg); color: var(--text); -webkit-tap-highlight-color: transparent; }
+        #login-page { display: flex; flex-direction: column; padding: 20px; align-items: center; justify-content: center; height: 90vh; }
+        .auth-card { width: 100%; max-width: 340px; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); text-align: center; border: 1px solid var(--border); }
+        header { padding: 15px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: white; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .page { display: none; padding: 15px; animation: fadeIn 0.2s ease-in; }
         .page.active { display: block; }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
-        .calendar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .day-box { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: white; min-height: 80px; position: relative; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 15px; }
+        .calendar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .day-box { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: white; min-height: 85px; display: flex; flex-direction: column; justify-content: space-between; }
         .day-box.today { border: 2px solid var(--primary); background: #e8f0fe; }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; box-sizing: border-box; }
-        button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .btn-main { background: var(--primary); color: white; width: 100%; }
-        .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
-        .tab-btn { flex: 1; padding: 15px 0; border: none; background: none; font-size: 11px; color: #5f6368; font-weight: bold; }
-        .tab-btn.active { color: var(--primary); border-top: 2px solid var(--primary); }
-        .clickable-item { padding: 12px; background: white; border: 1px solid #eee; border-radius: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
-        .badge { background: #e8f0fe; color: var(--primary); padding: 3px 8px; border-radius: 5px; font-size: 12px; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; box-sizing: border-box; background: #fff; }
+        button { padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; active { opacity: 0.7; } }
+        .btn-main { background: var(--primary); color: white; width: 100%; margin-top: 10px; }
+        .btn-done { background: var(--success); color: white; padding: 8px 14px; font-size: 11px; text-transform: uppercase; }
+        .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); z-index: 100; }
+        .tab-btn { flex: 1; padding: 16px 0; border: none; background: none; font-size: 11px; color: #5f6368; font-weight: bold; }
+        .tab-btn.active { color: var(--primary); border-top: 3px solid var(--primary); background: #f8f9fa; }
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f1f3f4; }
+        .clickable-item { padding: 14px; background: white; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .badge { background: #e8f0fe; color: var(--primary); padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div id="login-page">
     <div class="auth-card">
-        <h2 style="color:var(--primary)">Casa Manager</h2>
+        <h2 style="color:var(--primary); margin-top:0;">Casa Manager</h2>
+        <p style="color:#5f6368; font-size:14px; margin-bottom:20px;">Accedi per gestire la tua spesa</p>
         <input type="email" id="email" placeholder="Email">
         <input type="password" id="password" placeholder="Password">
-        <button id="login-btn" class="btn-main" onclick="handleLogin()">Accedi</button>
-        <p id="login-status" style="font-size:12px; color:var(--danger); margin-top:10px;"></p>
+        <button id="login-btn" class="btn-main" onclick="handleLogin()">ACCEDI</button>
     </div>
 </div>
 
 <div id="app-content" style="display:none;">
     <header>
-        <span style="font-weight:bold; color:var(--primary)">CASA MANAGER</span>
-        <button onclick="handleLogout()" style="background:none; color:var(--danger); font-size:11px;">ESCI</button>
+        <span style="font-weight:bold; color:var(--primary); letter-spacing:1px;">CASA MANAGER</span>
+        <button onclick="handleLogout()" style="background:none; color:var(--danger); font-size:12px; font-weight:bold;">ESCI</button>
     </header>
 
     <div id="home" class="page active">
         <div class="calendar-grid" id="settimana"></div>
-        <h4 style="margin:20px 0 10px 0">🛒 LISTA SPESA</h4>
+        <h4 style="margin:25px 0 12px 0; color:#3c4043; display:flex; align-items:center;">🛒 LISTA SPESA</h4>
         <div class="card" id="listaSpesa"></div>
     </div>
 
     <div id="dispensa" class="page">
-        <h3 id="disp-title">📦 Dispensa</h3>
+        <h3>📦 Dispensa</h3>
         <div class="card">
-            <input type="text" id="pNome" placeholder="Prodotto">
+            <input type="text" id="pNome" placeholder="Cosa hai comprato?">
             <input type="number" id="pQt" placeholder="Quantità">
-            <button class="btn-main" id="btn-disp" onclick="aggiungiDispensa()">Salva</button>
-            <button id="btn-annulla-disp" style="display:none; width:100%; background:none; color:red; margin-top:5px" onclick="resetDispEditor()">Annulla</button>
+            <button class="btn-main" onclick="aggiungiDispensa()">AGGIUNGI IN DISPENSA</button>
         </div>
         <div id="elencoDispensa"></div>
     </div>
 
     <div id="ricette" class="page">
-        <h3 id="ric-title">📖 Ricette</h3>
+        <h3>📖 Ricette</h3>
         <div class="card">
             <input type="text" id="rNome" placeholder="Nome Piatto">
-            <div style="display:flex; gap:5px;">
+            <div style="display:flex; gap:8px;">
                 <input type="text" id="ingN" placeholder="Ingr." style="flex:2">
                 <input type="number" id="ingQ" placeholder="Qt" style="flex:1">
-                <button onclick="addIng()" style="background:var(--primary); color:white; width:40px">+</button>
+                <button onclick="addIng()" style="background:var(--primary); color:white; width:45px; border-radius:8px;">+</button>
             </div>
-            <div id="listaTemp" style="margin:10px 0;"></div>
-            <button class="btn-main" id="btn-ric" onclick="salvaRicetta()">Salva Ricetta</button>
-            <button id="btn-annulla-ric" style="display:none; width:100%; background:none; color:red; margin-top:5px" onclick="resetRicEditor()">Annulla</button>
+            <div id="listaTemp" style="margin:12px 0;"></div>
+            <button class="btn-main" onclick="salvaRicetta()">SALVA NUOVA RICETTA</button>
         </div>
         <div id="elencoRicette"></div>
     </div>
@@ -92,41 +93,21 @@
 
     let dbData = { dispensa: {}, ricette: [], piano: {} };
     let ingTemp = [];
-    let editIdx = -1;
 
-    // Sblocco immediato: Controlla se c'è già una sessione attiva
     async function checkUser() {
         const { data } = await _supabase.auth.getSession();
-        if (data?.session) {
-            showApp();
-        }
+        if (data?.session) showApp();
     }
 
     async function handleLogin() {
         const e = document.getElementById('email').value;
         const p = document.getElementById('password').value;
-        const btn = document.getElementById('login-btn');
-        const status = document.getElementById('login-status');
-        
-        btn.innerText = "Accesso in corso...";
-        btn.disabled = true;
-
-        const { data, error } = await _supabase.auth.signInWithPassword({ email: e, password: p });
-        
-        if (error) {
-            status.innerText = "Errore: " + error.message;
-            btn.innerText = "Accedi";
-            btn.disabled = false;
-        } else if (data.session) {
-            showApp();
-        }
+        if(!e || !p) return;
+        const { error } = await _supabase.auth.signInWithPassword({ email: e, password: p });
+        if (error) alert("Credenziali errate"); else showApp();
     }
 
-    function handleLogout() { 
-        _supabase.auth.signOut(); 
-        localStorage.clear(); // Pulisce residui che bloccano il login
-        location.reload(); 
-    }
+    function handleLogout() { _supabase.auth.signOut(); location.reload(); }
 
     function showApp() {
         document.getElementById('login-page').style.display = 'none';
@@ -136,7 +117,11 @@
 
     async function fetchData() {
         const { data } = await _supabase.from('casa_data').select('*');
-        if (data) data.forEach(r => { dbData[r.data_type] = r.content; });
+        if (data) {
+            data.forEach(r => { dbData[r.data_type] = r.content; });
+            // Pulizia dati corrotti se presenti
+            if (Array.isArray(dbData.dispensa)) dbData.dispensa = {};
+        }
         render();
     }
 
@@ -145,74 +130,117 @@
         render();
     }
 
-    // --- LOGICA DISPENSA & RICETTE (ESATTAMENTE COME 4.1) ---
+    // LOGICA 4.1 - DISPENSA
     function aggiungiDispensa() {
         const n = document.getElementById('pNome').value.trim();
         const q = parseInt(document.getElementById('pQt').value);
         if(!n || isNaN(q)) return;
         const k = n.toLowerCase();
-        dbData.dispensa[k] = { q: q, display: n };
-        resetDispEditor(); sync('dispensa');
+        
+        if(dbData.dispensa[k]) dbData.dispensa[k].q += q;
+        else dbData.dispensa[k] = { q: q, display: n };
+        
+        document.getElementById('pNome').value = "";
+        document.getElementById('pQt').value = "";
+        sync('dispensa');
     }
 
+    function spesaCompletata(key, qta) {
+        const k = key.toLowerCase();
+        if(!dbData.dispensa[k]) dbData.dispensa[k] = { q: qta, display: key };
+        else dbData.dispensa[k].q += qta;
+        sync('dispensa');
+    }
+
+    // LOGICA 4.1 - RICETTE
     function addIng() {
         const n = document.getElementById('ingN').value.trim();
         const q = parseInt(document.getElementById('ingQ').value);
-        if(n && q) { ingTemp.push({ n: n.toLowerCase(), q: q, display: n }); renderIngs(); }
+        if(n && q) { 
+            ingTemp.push({ n: n.toLowerCase(), q: q, display: n }); 
+            document.getElementById('ingN').value = ""; 
+            document.getElementById('ingQ').value = "";
+            renderIngs(); 
+        }
     }
 
     function renderIngs() {
         document.getElementById('listaTemp').innerHTML = ingTemp.map((i, x) => `
-            <div style="font-size:12px; background:#f0f0f0; padding:5px; margin-bottom:2px; display:flex; justify-content:space-between;">
-                ${i.display} (${i.q}) <span onclick="ingTemp.splice(${x},1);renderIngs()" style="color:red">✕</span>
+            <div style="font-size:12px; background:#f8f9fa; border:1px solid #eee; padding:8px; margin-bottom:4px; border-radius:6px; display:flex; justify-content:space-between;">
+                ${i.display} (x${i.q}) <span onclick="ingTemp.splice(${x},1);renderIngs()" style="color:var(--danger); font-weight:bold;">✕</span>
             </div>`).join('');
     }
 
     function salvaRicetta() {
         const n = document.getElementById('rNome').value.trim();
         if(!n || ingTemp.length === 0) return;
-        const r = { nome: n, ingredienti: [...ingTemp] };
-        if(editIdx > -1) dbData.ricette[editIdx] = r; else dbData.ricette.push(r);
-        resetRicEditor(); sync('ricette');
+        dbData.ricette.push({ nome: n, ingredienti: [...ingTemp] });
+        ingTemp = []; 
+        document.getElementById('rNome').value = "";
+        renderIngs(); 
+        sync('ricette');
     }
 
     function render() {
-        const gs = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
+        const gs = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
         let f = new Date().getDate() - (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
         let hS = ""; let dS = [];
+        
         for(let i=0; i<7; i++) {
             let d = new Date(new Date().setDate(f+i));
             let s = d.toDateString(); dS.push(s);
             hS += `<div class="day-box ${new Date().toDateString() === s ? 'today' : ''}">
-                <div style="font-size:12px;font-weight:bold">${gs[i]} ${d.getDate()}</div>
-                <select onchange="dbData.piano['${s}']=this.value;sync('piano')">
-                    <option value="">-</option>
+                <div style="font-size:11px; color:#5f6368; font-weight:bold; text-transform:uppercase;">${gs[i]} ${d.getDate()}</div>
+                <select onchange="dbData.piano['${s}']=this.value;sync('piano')" style="margin:5px 0 0 0; padding:8px; font-size:14px;">
+                    <option value="">Cosa si mangia?</option>
                     ${dbData.ricette.map(r => `<option value="${r.nome}" ${dbData.piano[s]===r.nome?'selected':''}>${r.nome}</option>`).join('')}
                 </select>
             </div>`;
         }
         document.getElementById('settimana').innerHTML = hS;
 
+        let fab = {};
+        dS.forEach(x => {
+            let r = dbData.ricette.find(y => y.nome === dbData.piano[x]);
+            if(r) r.ingredienti.forEach(i => fab[i.n] = (fab[i.n] || 0) + i.q);
+        });
+
+        let hSp = "";
+        for(let k in fab) {
+            let d = dbData.dispensa[k]?.q || 0;
+            if(d < fab[k]) {
+                let m = fab[k] - d;
+                hSp += `<div class="item-row">
+                    <span style="font-size:15px;">${dbData.dispensa[k]?.display || k} <b style="color:var(--danger)">x${m}</b></span>
+                    <button class="btn-done" onclick="spesaCompletata('${k}', ${m})">Preso</button>
+                </div>`;
+            }
+        }
+        document.getElementById('listaSpesa').innerHTML = hSp || "<p style='text-align:center; color:var(--success); font-weight:bold; font-size:14px; margin:10px 0;'>✓ Tutto in dispensa!</p>";
+
         document.getElementById('elencoDispensa').innerHTML = Object.keys(dbData.dispensa).map(k => `
             <div class="clickable-item">
-                ${dbData.dispensa[k].display} <span class="badge">${dbData.dispensa[k].q}</span>
-                <span onclick="delete dbData.dispensa['${k}'];sync('dispensa')" style="color:#ccc">✕</span>
+                <span style="font-weight:500;">${dbData.dispensa[k].display}</span>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span class="badge">${dbData.dispensa[k].q}</span>
+                    <span onclick="delete dbData.dispensa['${k}'];sync('dispensa')" style="color:#bdc1c6; padding:5px;">✕</span>
+                </div>
             </div>`).join('');
 
         document.getElementById('elencoRicette').innerHTML = dbData.ricette.map((r, i) => `
             <div class="clickable-item">
-                ${r.nome} <span onclick="dbData.ricette.splice(${i},1);sync('ricette')" style="color:#ccc">✕</span>
+                <span style="font-weight:500;">${r.nome}</span>
+                <span onclick="dbData.ricette.splice(${i},1);sync('ricette')" style="color:#bdc1c6; padding:5px;">✕</span>
             </div>`).join('');
     }
 
     function cambiaPagina(id, btn) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active'); btn.classList.add('active');
+        document.getElementById(id).classList.add('active'); 
+        btn.classList.add('active');
+        window.scrollTo(0,0);
     }
-
-    function resetDispEditor() { document.getElementById('pNome').value = ""; document.getElementById('pQt').value = ""; }
-    function resetRicEditor() { editIdx = -1; ingTemp = []; renderIngs(); document.getElementById('rNome').value = ""; }
 
     checkUser();
 </script>
