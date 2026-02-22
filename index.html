@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Casa Manager v3.2 - Edit Mode</title>
+    <title>Casa Manager v3.3 - Spesa Intelligente</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #1a73e8; --bg: #ffffff; --card-bg: #f8f9fa; --text: #3c4043; --border: #dadce0; --today-bg: #e8f0fe; --success: #1e8e3e; }
@@ -13,11 +13,11 @@
         header { padding: 12px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 100; }
         .page { display: none; padding: 15px; }
         .page.active { display: block; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .day-box { border: 1px solid var(--border); border-radius: 12px; padding: 12px; min-height: 100px; background: white; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .day-box { border: 1px solid var(--border); border-radius: 10px; padding: 10px; min-height: 80px; background: white; }
         .day-box.today { background: var(--today-bg); border: 2px solid var(--primary); }
         .day-box:last-child { grid-column: span 2; }
-        .day-name { font-size: 0.75rem; font-weight: 700; color: #70757a; text-transform: uppercase; }
+        .day-name { font-size: 0.7rem; font-weight: 700; color: #70757a; text-transform: uppercase; }
         .card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 15px; margin-bottom: 15px; }
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
@@ -28,6 +28,7 @@
         .tab-btn.active { color: var(--primary); font-weight: bold; border-top: 2px solid var(--primary); }
         .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f3f4; }
         .ing-list-item { font-size: 14px; background: #f8f9fa; padding: 5px 10px; border-radius: 5px; margin-bottom: 5px; display: flex; justify-content: space-between; }
+        .btn-done { background: var(--success); color: white; padding: 6px 12px; font-size: 12px; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -45,40 +46,40 @@
 
 <div id="app-content" style="display: none;">
     <header>
-        <span id="header-title" style="font-weight: 600; color: var(--primary);">CASAMANAGER</span>
-        <button style="background:none; color:red; font-size:11px;" onclick="handleLogout()">Esci</button>
+        <span style="font-weight: 600; color: var(--primary);">CASAMANAGER</span>
+        <button style="background:none; color:red; font-size:11px;" onclick="handleLogout()">Logout</button>
     </header>
 
     <div id="home" class="page active">
         <div class="calendar-grid" id="settimana"></div>
-        <h3 style="margin: 20px 0 10px 0; font-size: 0.8rem; color: #70757a; text-transform: uppercase;">🛒 Lista della Spesa</h3>
+        <h3 style="margin: 20px 0 10px 0; font-size: 0.8rem; color: #70757a; text-transform: uppercase;">🛒 Mancanti (da comprare)</h3>
         <div class="card" id="listaSpesa"></div>
     </div>
 
     <div id="dispensa" class="page">
         <h2>📦 Dispensa</h2>
         <div class="card">
-            <input type="text" id="pNome" placeholder="Prodotto">
-            <input type="number" id="pQt" placeholder="Quantità">
-            <button class="btn-main" onclick="aggiungiDispensa()">Aggiungi Prodotto</button>
+            <input type="text" id="pNome" placeholder="Prodotto (es: Pasta)">
+            <input type="number" id="pQt" placeholder="Quantità totale che hai ora">
+            <button class="btn-main" onclick="aggiungiDispensa()">Aggiorna Stock</button>
         </div>
         <div id="elencoDispensa"></div>
     </div>
 
     <div id="ricette" class="page">
-        <h2 id="ricetta-editor-title">📖 Crea Ricetta</h2>
+        <h2 id="ricetta-editor-title">📖 Gestione Ricette</h2>
         <div class="card">
-            <input type="text" id="rNome" placeholder="Nome Piatto (es: Pasta Carbonara)">
-            <div style="display:flex; gap:5px; align-items: center;">
+            <input type="text" id="rNome" placeholder="Nome Piatto">
+            <div style="display:flex; gap:5px;">
                 <input type="text" id="ingNome" placeholder="Ingrediente" style="flex:2">
                 <input type="number" id="ingQt" placeholder="Qtà" style="flex:1">
                 <button onclick="aggiungiIngTemp()" style="background:var(--primary); color:white; width:40px">+</button>
             </div>
             <div id="listaTemp" style="margin: 10px 0;"></div>
             <button class="btn-main" id="btn-salva-ricetta" onclick="salvaRicetta()">Salva Ricetta</button>
-            <button id="btn-annulla-edit" class="btn-outline" style="display:none;" onclick="resetEditorRicette()">Annulla Modifica</button>
+            <button id="btn-annulla-edit" class="btn-outline" style="display:none;" onclick="resetEditorRicette()">Annulla</button>
         </div>
-        <div id="elencoRicette" style="margin-top:20px;"></div>
+        <div id="elencoRicette"></div>
     </div>
 
     <nav class="tab-bar">
@@ -95,7 +96,7 @@
 
     let dbData = { dispensa: {}, ricette: [], piano: {} };
     let ingTemp = [];
-    let editIdx = -1; // -1 significa che stiamo creando una nuova ricetta
+    let editIdx = -1;
 
     async function checkUser() {
         const { data } = await _supabase.auth.getSession();
@@ -126,9 +127,7 @@
 
     async function fetchData() {
         const { data } = await _supabase.from('casa_data').select('*');
-        if (data && data.length > 0) {
-            data.forEach(row => { dbData[row.data_type] = row.content; });
-        }
+        if (data) data.forEach(row => { dbData[row.data_type] = row.content; });
         render();
     }
 
@@ -137,105 +136,84 @@
         render();
     }
 
-    // --- LOGICA RICETTE (EDIT) ---
-    function aggiungiIngTemp() {
-        const n = document.getElementById('ingNome').value;
-        const q = parseInt(document.getElementById('ingQt').value);
-        if(n && q) {
-            ingTemp.push({ n, q });
-            document.getElementById('ingNome').value = '';
-            document.getElementById('ingQt').value = '';
-            renderIngTemp();
+    // --- LOGICA SPESA INTELLIGENTE ---
+    function spesaCompletata(prodotto, qtaMancante) {
+        // Quando clicchi "Comprato", aggiungiamo alla dispensa quello che mancava
+        let attuale = dbData.dispensa[prodotto]?.q || 0;
+        dbData.dispensa[prodotto] = { q: attuale + qtaMancante };
+        sync('dispensa');
+    }
+
+    function aggiungiDispensa() {
+        const n = document.getElementById('pNome').value.trim();
+        const q = parseInt(document.getElementById('pQt').value);
+        if(n && !isNaN(q)) {
+            dbData.dispensa[n] = { q: q };
+            document.getElementById('pNome').value = '';
+            document.getElementById('pQt').value = '';
+            sync('dispensa');
         }
     }
 
+    // --- GESTIONE RICETTE ---
+    function aggiungiIngTemp() {
+        const n = document.getElementById('ingNome').value.trim();
+        const q = parseInt(document.getElementById('ingQt').value);
+        if(n && q) { ingTemp.push({ n, q }); document.getElementById('ingNome').value=''; document.getElementById('ingQt').value=''; renderIngTemp(); }
+    }
     function renderIngTemp() {
         document.getElementById('listaTemp').innerHTML = ingTemp.map((i, idx) => `
-            <div class="ing-list-item">
-                <span>${i.n} (${i.q})</span>
-                <span onclick="ingTemp.splice(${idx},1);renderIngTemp()" style="color:red; font-weight:bold;">✕</span>
-            </div>`).join('');
+            <div class="ing-list-item"><span>${i.n} (${i.q})</span><span onclick="ingTemp.splice(${idx},1);renderIngTemp()" style="color:red;">✕</span></div>`).join('');
     }
-
     function caricaRicettaPerEdit(idx) {
-        editIdx = idx;
-        const r = dbData.ricette[idx];
-        document.getElementById('rNome').value = r.nome;
-        ingTemp = [...r.ingredienti];
-        renderIngTemp();
-        
-        document.getElementById('ricetta-editor-title').innerText = "📝 Modifica Ricetta";
+        editIdx = idx; const r = dbData.ricette[idx];
+        document.getElementById('rNome').value = r.nome; ingTemp = [...r.ingredienti]; renderIngTemp();
         document.getElementById('btn-salva-ricetta').innerText = "Aggiorna Ricetta";
         document.getElementById('btn-annulla-edit').style.display = "block";
         window.scrollTo(0,0);
     }
-
     function resetEditorRicette() {
-        editIdx = -1;
-        ingTemp = [];
-        document.getElementById('rNome').value = '';
-        document.getElementById('listaTemp').innerHTML = '';
-        document.getElementById('ricetta-editor-title').innerText = "📖 Crea Ricetta";
+        editIdx = -1; ingTemp = []; document.getElementById('rNome').value = ''; document.getElementById('listaTemp').innerHTML = '';
         document.getElementById('btn-salva-ricetta').innerText = "Salva Ricetta";
         document.getElementById('btn-annulla-edit').style.display = "none";
     }
-
     function salvaRicetta() {
         const n = document.getElementById('rNome').value.trim();
         if(n && ingTemp.length > 0) {
-            const nuovaRicetta = { nome: n, ingredienti: [...ingTemp] };
-            
-            if (editIdx > -1) {
-                dbData.ricette[editIdx] = nuovaRicetta; // Aggiorna esistente
-            } else {
-                dbData.ricette.push(nuovaRicetta); // Crea nuova
-            }
-            
-            resetEditorRicette();
-            sync('ricette');
-        } else {
-            alert("Inserisci un nome e almeno un ingrediente!");
+            if(editIdx > -1) dbData.ricette[editIdx] = { nome: n, ingredienti: [...ingTemp] };
+            else dbData.ricette.push({ nome: n, ingredienti: [...ingTemp] });
+            resetEditorRicette(); sync('ricette');
         }
-    }
-
-    // --- ALTRE FUNZIONI ---
-    function aggiungiDispensa() {
-        const n = document.getElementById('pNome').value;
-        const q = parseInt(document.getElementById('pQt').value);
-        if(n && q) { dbData.dispensa[n] = { q }; sync('dispensa'); document.getElementById('pNome').value=''; document.getElementById('pQt').value=''; }
     }
 
     function cambiaPagina(id, btn) {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        btn.classList.add('active');
+        document.getElementById(id).classList.add('active'); btn.classList.add('active');
     }
 
     function render() {
-        const giorniNomi = ["Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato", "Domenica"];
+        const giorniNomi = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
         let curr = new Date();
         let first = curr.getDate() - (curr.getDay() === 0 ? 6 : curr.getDay() - 1);
         
-        // Calendario
         let htmlSett = "";
         let dateSettimana = [];
         for (let i = 0; i < 7; i++) {
             let d = new Date(new Date().setDate(first + i));
-            let dStr = d.toDateString();
-            dateSettimana.push(dStr);
+            let dStr = d.toDateString(); dateSettimana.push(dStr);
             htmlSett += `
                 <div class="day-box ${new Date().toDateString() === dStr ? 'today' : ''}">
                     <div class="day-name">${giorniNomi[i]} ${d.getDate()}</div>
                     <select onchange="dbData.piano['${dStr}']=this.value;sync('piano')">
-                        <option value="">Scegli...</option>
+                        <option value="">-</option>
                         ${dbData.ricette.map(r => `<option value="${r.nome}" ${dbData.piano[dStr]===r.nome?'selected':''}>${r.nome}</option>`).join('')}
                     </select>
                 </div>`;
         }
         document.getElementById('settimana').innerHTML = htmlSett;
 
-        // Spesa
+        // --- LOGICA SPESA INTELLIGENTE ---
         let fabbisogno = {};
         dateSettimana.forEach(ds => {
             let rNome = dbData.piano[ds];
@@ -245,21 +223,21 @@
 
         let htmlSpesa = "";
         for (let prod in fabbisogno) {
-            let disp = dbData.dispensa[prod]?.q || 0;
-            if(disp < fabbisogno[prod]) {
-                htmlSpesa += `<div class="item-row"><span>${prod} (${fabbisogno[prod]-disp} mancanti)</span></div>`;
+            let qtaInDispensa = dbData.dispensa[prod]?.q || 0;
+            if (qtaInDispensa < fabbisogno[prod]) {
+                let daComprare = fabbisogno[prod] - qtaInDispensa;
+                htmlSpesa += `
+                    <div class="item-row">
+                        <span><strong>${prod}</strong>: ne servono ${daComprare} (dispensa: ${qtaInDispensa})</span>
+                        <button class="btn-done" onclick="spesaCompletata('${prod}', ${daComprare})">✓ Preso</button>
+                    </div>`;
             }
         }
-        document.getElementById('listaSpesa').innerHTML = htmlSpesa || "<p style='text-align:center; color:green;'>Hai tutto!</p>";
+        document.getElementById('listaSpesa').innerHTML = htmlSpesa || "<p style='text-align:center; color:green; font-weight:bold;'>✓ Tutto in dispensa!</p>";
 
-        // Lista Ricette (Cliccabili)
-        document.getElementById('elencoRicette').innerHTML = "<h3>Le tue Ricette (clicca per modificare)</h3>" + dbData.ricette.map((r, i) => `
-            <div class="item-row" style="cursor:pointer; background:#fff; padding:12px; border-radius:10px; margin-bottom:5px; border:1px solid #eee;">
-                <span onclick="caricaRicettaPerEdit(${i})" style="flex:1; font-weight:500;">${r.nome}</span>
-                <button onclick="if(confirm('Eliminare?')){dbData.ricette.splice(${i},1);sync('ricette')}" style="color:red; background:none; padding:5px;">✕</button>
-            </div>`).join('');
+        document.getElementById('elencoRicette').innerHTML = "<h3 style='margin-top:20px'>Le tue Ricette</h3>" + dbData.ricette.map((r, i) => `
+            <div class="item-row"><span onclick="caricaRicettaPerEdit(${i})" style="flex:1">${r.nome}</span><button onclick="if(confirm('Elimino?')){dbData.ricette.splice(${i},1);sync('ricette')}" style="color:red; background:none;">✕</button></div>`).join('');
         
-        // Dispensa
         document.getElementById('elencoDispensa').innerHTML = Object.entries(dbData.dispensa).map(([n, v]) => `
             <div class="item-row"><span>${n}: ${v.q}</span><button onclick="delete dbData.dispensa['${n}'];sync('dispensa')" style="color:red; background:none;">✕</button></div>`).join('');
     }
