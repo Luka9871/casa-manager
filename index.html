@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Casa Manager v4.1</title>
+    <title>Casa Manager v4.1 - Verified</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #1a73e8; --bg: #f8f9fa; --card: #ffffff; --text: #3c4043; --border: #dadce0; --accent: #fbbc04; --danger: #d93025; }
+        :root { --primary: #1a73e8; --bg: #f8f9fa; --card: #ffffff; --text: #3c4043; --border: #dadce0; --accent: #fbbc04; --danger: #d93025; --success: #1e8e3e; }
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding-bottom: 80px; background: var(--bg); color: var(--text); }
         #login-page { display: flex; flex-direction: column; padding: 20px; align-items: center; justify-content: center; height: 95vh; }
         .auth-card { width: 100%; max-width: 320px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; border: 1px solid var(--border); }
@@ -17,11 +17,14 @@
         .calendar-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .day-box { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: white; min-height: 80px; position: relative; }
         .day-box.today { border: 2px solid var(--primary); background: #e8f0fe; }
-        .day-box:last-child { grid-column: span 2; }
         input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; box-sizing: border-box; }
         button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-main { background: var(--primary); color: white; width: 100%; }
         .btn-cook { position: absolute; bottom: 5px; right: 5px; background: var(--accent); color: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        /* FIX STILI MANCANTI */
+        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .btn-done { background: var(--success); color: white; padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+        
         .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
         .tab-btn { flex: 1; padding: 15px 0; border: none; background: none; font-size: 11px; color: #5f6368; font-weight: bold; }
         .tab-btn.active { color: var(--primary); border-top: 2px solid var(--primary); }
@@ -42,7 +45,7 @@
 
 <div id="app-content" style="display:none;">
     <header>
-        <span style="font-weight:bold; color:var(--primary)">CASA MANAGER</span>
+        <span style="font-weight:bold; color:var(--primary)">CASA MANAGER 4.1</span>
         <button onclick="handleLogout()" style="background:none; color:var(--danger); font-size:11px;">ESCI</button>
     </header>
 
@@ -138,12 +141,14 @@
         } else { dbData.dispensa[k] = { q: q, display: n }; }
         resetDispEditor(); sync('dispensa');
     }
+
     function editProd(k) {
         document.getElementById('pNome').value = dbData.dispensa[k].display;
         document.getElementById('pQt').value = dbData.dispensa[k].q;
         document.getElementById('disp-title').innerText = "📝 Modifica";
         document.getElementById('btn-annulla-disp').style.display = "block";
     }
+
     function resetDispEditor() {
         document.getElementById('pNome').value = ""; document.getElementById('pQt').value = "";
         document.getElementById('disp-title').innerText = "📦 Dispensa";
@@ -156,12 +161,14 @@
         const q = parseInt(document.getElementById('ingQ').value);
         if(n && q) { ingTemp.push({ n: n.toLowerCase(), q: q, display: n }); renderIngs(); }
     }
+
     function renderIngs() {
         document.getElementById('listaTemp').innerHTML = ingTemp.map((i, x) => `
             <div style="font-size:12px; background:#f0f0f0; padding:5px; margin-bottom:2px; display:flex; justify-content:space-between;">
                 ${i.display} (${i.q}) <span onclick="ingTemp.splice(${x},1);renderIngs()" style="color:red">✕</span>
             </div>`).join('');
     }
+
     function salvaRicetta() {
         const n = document.getElementById('rNome').value.trim();
         if(!n || ingTemp.length === 0) return;
@@ -169,6 +176,7 @@
         if(editIdx > -1) dbData.ricette[editIdx] = r; else dbData.ricette.push(r);
         resetRicEditor(); sync('ricette');
     }
+
     function editRic(i) {
         editIdx = i; const r = dbData.ricette[i];
         document.getElementById('rNome').value = r.nome;
@@ -176,6 +184,7 @@
         document.getElementById('ric-title').innerText = "📝 Modifica Ricetta";
         document.getElementById('btn-annulla-ric').style.display = "block";
     }
+
     function resetRicEditor() {
         editIdx = -1; ingTemp = []; renderIngs();
         document.getElementById('rNome').value = "";
@@ -183,7 +192,7 @@
         document.getElementById('btn-annulla-ric').style.display = "none";
     }
 
-    // LOGICA
+    // LOGICA CUCINA
     function cucina(d) {
         const r = dbData.ricette.find(x => x.nome === dbData.piano[d]);
         if(!r || !confirm("Scarico ingredienti?")) return;
@@ -194,6 +203,13 @@
         dbData.piano[d] = ""; sync('dispensa'); sync('piano');
     }
 
+    // FIX FUNZIONE COMPRA ESTERNA
+    window.compraRapido = function(k, d, q) {
+        if(!dbData.dispensa[k]) dbData.dispensa[k] = { q: q, display: d };
+        else dbData.dispensa[k].q += q;
+        sync('dispensa');
+    }
+
     function render() {
         const gs = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
         let f = new Date().getDate() - (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
@@ -202,7 +218,7 @@
             let d = new Date(new Date().setDate(f+i));
             let s = d.toDateString(); dS.push(s);
             hS += `<div class="day-box ${new Date().toDateString() === s ? 'today' : ''}">
-                <div class="day-name">${gs[i]} ${d.getDate()}</div>
+                <div style="font-size:12px; font-weight:bold">${gs[i]} ${d.getDate()}</div>
                 <select onchange="dbData.piano['${s}']=this.value;sync('piano')">
                     <option value="">-</option>
                     ${dbData.ricette.map(r => `<option value="${r.nome}" ${dbData.piano[s]===r.nome?'selected':''}>${r.nome}</option>`).join('')}
@@ -215,24 +231,39 @@
         let fab = {};
         dS.forEach(x => {
             let r = dbData.ricette.find(y => y.nome === dbData.piano[x]);
-            if(r) r.ingredienti.forEach(i => fab[i.n] = (fab[i.n] || 0) + i.q);
+            if(r) r.ingredienti.forEach(i => {
+                if(!fab[i.n]) fab[i.n] = { q: 0, d: i.display };
+                fab[i.n].q += i.q;
+            });
         });
+
         let hSp = "";
         for(let k in fab) {
             let d = dbData.dispensa[k]?.q || 0;
-            if(d < fab[k]) hSp += `<div class="item-row">${dbData.dispensa[k]?.display || k} (${fab[k]-d}) <button class="btn-done" onclick="dbData.dispensa['${k}']={q:(dbData.dispensa['${k}']?.q||0)+(fab['${k}']-(dbData.dispensa['${k}']?.q||0)),display:k};sync('dispensa')">OK</button></div>`;
+            if(d < fab[k].q) {
+                let manca = fab[k].q - d;
+                let nomeVisualizzato = fab[k].d;
+                hSp += `<div class="item-row">
+                    <span>${nomeVisualizzato} (mancano: ${manca})</span>
+                    <button class="btn-done" onclick="window.compraRapido('${k}', '${nomeVisualizzato}', ${manca})">OK</button>
+                </div>`;
+            }
         }
-        document.getElementById('listaSpesa').innerHTML = hSp || "Tutto pronto!";
+        document.getElementById('listaSpesa').innerHTML = hSp || "<p style='text-align:center;font-size:12px;color:green'>Tutto pronto!</p>";
 
         document.getElementById('elencoDispensa').innerHTML = Object.keys(dbData.dispensa).map(k => `
             <div class="clickable-item" onclick="editProd('${k}')">
-                ${dbData.dispensa[k].display} <span class="badge">${dbData.dispensa[k].q}</span>
-                <span onclick="event.stopPropagation();delete dbData.dispensa['${k}'];sync('dispensa')" style="color:#ccc">✕</span>
+                <span>${dbData.dispensa[k].display}</span>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span class="badge">${dbData.dispensa[k].q}</span>
+                    <span onclick="event.stopPropagation();delete dbData.dispensa['${k}'];sync('dispensa')" style="color:#ccc">✕</span>
+                </div>
             </div>`).join('');
 
         document.getElementById('elencoRicette').innerHTML = dbData.ricette.map((r, i) => `
             <div class="clickable-item" onclick="editRic(${i})">
-                ${r.nome} <span onclick="event.stopPropagation();dbData.ricette.splice(${i},1);sync('ricette')" style="color:#ccc">✕</span>
+                <span>${r.nome}</span>
+                <span onclick="event.stopPropagation();dbData.ricette.splice(${i},1);sync('ricette')" style="color:#ccc">✕</span>
             </div>`).join('');
     }
 
