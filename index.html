@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Casa Manager v4.6</title>
+    <title>Casa Manager v4.1</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #1a73e8; --bg: #f8f9fa; --card: #ffffff; --text: #3c4043; --border: #dadce0; --accent: #fbbc04; --danger: #d93025; --success: #1e8e3e; }
+        :root { --primary: #1a73e8; --bg: #f8f9fa; --card: #ffffff; --text: #3c4043; --border: #dadce0; --accent: #fbbc04; --danger: #d93025; }
         body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding-bottom: 80px; background: var(--bg); color: var(--text); }
         #login-page { display: flex; flex-direction: column; padding: 20px; align-items: center; justify-content: center; height: 95vh; }
         .auth-card { width: 100%; max-width: 320px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; border: 1px solid var(--border); }
@@ -21,13 +21,11 @@
         button { padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         .btn-main { background: var(--primary); color: white; width: 100%; }
         .btn-cook { position: absolute; bottom: 5px; right: 5px; background: var(--accent); color: white; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .btn-done { background: var(--success); color: white; padding: 6px 10px; font-size: 11px; border-radius: 6px; }
         .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid var(--border); padding-bottom: env(safe-area-inset-bottom); }
         .tab-btn { flex: 1; padding: 15px 0; border: none; background: none; font-size: 11px; color: #5f6368; font-weight: bold; }
         .tab-btn.active { color: var(--primary); border-top: 2px solid var(--primary); }
-        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
         .clickable-item { padding: 12px; background: white; border: 1px solid #eee; border-radius: 8px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
-        .badge { background: #e8f0fe; color: var(--primary); padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; }
+        .badge { background: #e8f0fe; color: var(--primary); padding: 3px 8px; border-radius: 5px; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -43,7 +41,7 @@
 
 <div id="app-content" style="display:none;">
     <header>
-        <span style="font-weight:bold; color:var(--primary)">CASA MANAGER</span>
+        <span style="font-weight:bold; color:var(--primary)">CASA MANAGER 4.1</span>
         <button onclick="handleLogout()" style="background:none; color:var(--danger); font-size:11px;">ESCI</button>
     </header>
 
@@ -128,19 +126,17 @@
         render();
     }
 
-    // --- DISPENSA ---
+    // --- LOGICA DISPENSA 4.1 ---
     function aggiungiDispensa() {
         const n = document.getElementById('pNome').value.trim();
         const q = parseInt(document.getElementById('pQt').value);
         if(!n || isNaN(q)) return;
         const k = n.toLowerCase();
 
-        if (editKey !== "") {
-            delete dbData.dispensa[editKey]; // Se stiamo modificando, togliamo il vecchio
-        }
+        if (editKey !== "") delete dbData.dispensa[editKey];
 
         if(dbData.dispensa[k] && editKey === "") {
-            dbData.dispensa[k].q += q; // Somma se non in modalità edit
+            dbData.dispensa[k].q += q;
         } else {
             dbData.dispensa[k] = { q: q, display: n };
         }
@@ -163,7 +159,7 @@
         document.getElementById('btn-annulla-disp').style.display = "none";
     }
 
-    // --- RICETTE ---
+    // --- LOGICA RICETTE 4.1 ---
     function addIng() {
         const n = document.getElementById('ingN').value.trim();
         const q = parseInt(document.getElementById('ingQ').value);
@@ -201,14 +197,7 @@
         document.getElementById('btn-annulla-ric').style.display = "none";
     }
 
-    // --- LOGICA CUCINA & COMPRA ---
-    window.compraProdotto = function(key, qta) {
-        const k = key.toLowerCase();
-        if(!dbData.dispensa[k]) dbData.dispensa[k] = { q: qta, display: key };
-        else dbData.dispensa[k].q += qta;
-        sync('dispensa');
-    };
-
+    // --- LOGICA CUCINA 4.1 ---
     function cucina(d) {
         const r = dbData.ricette.find(x => x.nome === dbData.piano[d]);
         if(!r || !confirm("Scarico ingredienti per " + r.nome + "?")) return;
@@ -240,35 +229,29 @@
         let fab = {};
         dS.forEach(x => {
             let r = dbData.ricette.find(y => y.nome === dbData.piano[x]);
-            if(r) r.ingredienti.forEach(i => fab[i.n] = { q: (fab[i.n]?.q || 0) + i.q, d: i.display });
+            if(r) r.ingredienti.forEach(i => fab[i.n] = (fab[i.n] || 0) + i.q);
         });
 
         let hSp = "";
         for(let k in fab) {
             let inDisp = dbData.dispensa[k]?.q || 0;
-            if(inDisp < fab[k].q) {
-                let manca = fab[k].q - inDisp;
-                hSp += `<div class="item-row">
-                    <span>${fab[k].d} <b>x${manca}</b></span>
-                    <button class="btn-done" onclick="window.compraProdotto('${fab[k].d.replace(/'/g, "\\'")}', ${manca})">COMPRA</button>
-                </div>`;
-            }
+            if(inDisp < fab[k]) hSp += `<div style="padding:5px 0; border-bottom:1px solid #eee">${k} (mancano: ${fab[k]-inDisp})</div>`;
         }
-        document.getElementById('listaSpesa').innerHTML = hSp || "<p style='text-align:center;color:green;font-size:12px'>Tutto in stock!</p>";
+        document.getElementById('listaSpesa').innerHTML = hSp || "Tutto OK!";
 
         document.getElementById('elencoDispensa').innerHTML = Object.keys(dbData.dispensa).map(k => `
             <div class="clickable-item" onclick="editProd('${k}')">
                 <span>${dbData.dispensa[k].display}</span>
                 <div style="display:flex;align-items:center;gap:12px">
                     <span class="badge">${dbData.dispensa[k].q}</span>
-                    <span onclick="event.stopPropagation();delete dbData.dispensa['${k}'];sync('dispensa')" style="color:#ccc;padding:5px">✕</span>
+                    <span onclick="event.stopPropagation();delete dbData.dispensa['${k}'];sync('dispensa')" style="color:#ccc">✕</span>
                 </div>
             </div>`).join('');
 
         document.getElementById('elencoRicette').innerHTML = dbData.ricette.map((r, i) => `
             <div class="clickable-item" onclick="editRic(${i})">
                 <span>${r.nome}</span>
-                <span onclick="event.stopPropagation();dbData.ricette.splice(${i},1);sync('ricette')" style="color:#ccc;padding:5px">✕</span>
+                <span onclick="event.stopPropagation();dbData.ricette.splice(${i},1);sync('ricette')" style="color:#ccc">✕</span>
             </div>`).join('');
     }
 
