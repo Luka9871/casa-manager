@@ -258,9 +258,21 @@
     }
 
     async function sync(t) {
-        await _supabase.from('casa_data').upsert({ data_type: t, content: dbData[t] });
+    const { error } = await _supabase.from('casa_data').upsert(
+        { 
+            data_type: t, 
+            content: dbData[t] 
+        }, 
+        { onConflict: 'data_type' } // FONDAMENTALE: aggiorna la riga indipendentemente dall'utente
+    );
+
+    if (error) {
+        console.error("Errore di salvataggio:", error);
+        alert("Attenzione: Modifica non salvata nel database!");
+    } else {
         render();
     }
+}
 
     window.compra = function(k, d, q) {
         if (!dbData.dispensa[k]) dbData.dispensa[k] = { q: q, display: d };
@@ -428,3 +440,4 @@
 </script>
 </body>
 </html>
+
